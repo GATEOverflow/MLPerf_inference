@@ -47,10 +47,10 @@ global_batch_size = 1
 
 class MyThreadOrtValue(threading.Thread):
 
-    def __init__(self, sess_i, btch):
+    def __init__(self, sess_i, batch):
         threading.Thread.__init__(self)
         self.sess_i = sess_i
-        self.btch = btch
+        self.batch = batch
         self.q = []
         # self.ort_device = get_ort_device_from_session(self.sess)
         # self.ort_device = onnxcustom.utils.onnxruntime_helper.get_ort_device ('gpu')
@@ -68,10 +68,10 @@ class MyThreadOrtValue(threading.Thread):
         # print ('batch content: ')
         # print ('batch content: ')
         # print ('batch content: ')
-        # print (self.btch)
+        # print (self.batch)
 
         
-        out = sess_to_run.run([o.name for o in sess_to_run.get_outputs()], self.btch)
+        out = sess_to_run.run([o.name for o in sess_to_run.get_outputs()], self.batch)
 
         # print ("out: ")
         # print (out)
@@ -181,7 +181,6 @@ class BERT_ONNXRuntime_SUT():
             # self.sess = onnxruntime.InferenceSession(model_path, self.options, providers=['CUDAExecutionProvider'])
 
             print ("")
-            print ("Inside rocmExecution provider")
             print ("Detected providers: ")
             print (onnxruntime.get_all_providers())
             
@@ -194,9 +193,17 @@ class BERT_ONNXRuntime_SUT():
             starting_device = args.gpu_device
             ending_device = starting_device + self.gpu_num
             self.sess = []
+
+            providers = []
+            preferred_execution_provider = os.environ.get("ONNXRUNTIME_PREFERRED_EXECUTION_PROVIDER", "CUDAExecutionProvider")
+            providers.append( preferred_execution_provider )
+
+            providers.append('CPUExecutionProvider')
+
             for i in range (starting_device, ending_device, 1): 
                 self.sess.append (
-                    onnxruntime.InferenceSession (model_path, self.options, providers=['ROCMExecutionProvider', "CPUExecutionProvider"], provider_options=[{"device_id": i}, {}])
+                        #onnxruntime.InferenceSession (model_path, self.options, providers=['ROCMExecutionProvider', "CPUExecutionProvider"], provider_options=[{"device_id": i}, {}])
+                    onnxruntime.InferenceSession (model_path, self.options, providers=providers, provider_options=[{"device_id": i}, {}])
                 )
                 print(f"Initialize device {i}")
                 print (self.sess)
@@ -233,10 +240,6 @@ class BERT_ONNXRuntime_SUT():
         # Keep track of starting time 
         # sut_start_time = time.time()
         
-        print("Constructing SUT...")
-        print("Constructing SUT...")
-        print("Constructing SUT...")
-        print("Constructing SUT...")
         print("Constructing SUT...")
         self.sut = lg.ConstructSUT(self.issue_queries, self.flush_queries)
         print("Finished constructing SUT.")
